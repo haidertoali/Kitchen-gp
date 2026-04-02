@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--
+╔══════════════════════════════════════════════════════════════════════╗
+║  EDIT THESE TWO LINES:                                               ║
+║  G_CLIENT_ID   → your Google OAuth Client ID                        ║
+║  ADMIN_EMAILS  → your Gmail address (gives you full admin access)   ║
+╚══════════════════════════════════════════════════════════════════════╝
+-->
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Kitchen GP</title>
+<script src="https://accounts.google.com/gsi/client" async></script>
+<style>
+:root{
+  --sans:system-ui,-apple-system,sans-serif; --mono:'Courier New',monospace;
+  --bg0:#fff; --bg1:#f5f5f4; --bg2:#e7e5e4;
+  --t0:#1c1917; --t1:#57534e; --t2:#a8a29e;
+  --ti:#2563eb; --td:#dc2626; --ts:#166534;
+  --b0:rgba(0,0,0,.07); --b1:rgba(0,0,0,.14); --b2:rgba(0,0,0,.25);
+  --bgs:#dcfce7; --bs:#86efac;
+  --rmd:8px; --rlg:12px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg0:#1c1917; --bg1:#292524; --bg2:#3c3836;
+  --t0:#fafaf9; --t1:#a8a29e; --t2:#57534e;
+  --ti:#60a5fa; --td:#f87171; --ts:#86efac;
+  --b0:rgba(255,255,255,.07); --b1:rgba(255,255,255,.14); --b2:rgba(255,255,255,.26);
+  --bgs:#14532d; --bs:#166534;
+}}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{font-family:var(--sans);background:var(--bg0);color:var(--t0);font-size:14px;line-height:1.5}
+input[type="text"],input[type="number"]{
+  background:var(--bg0);border:0.5px solid var(--b1);border-radius:var(--rmd);
+  color:var(--t0);font-family:var(--sans);font-size:14px;
+  padding:7px 10px;width:100%;direction:ltr;text-align:left;transition:border-color .15s;
+}
+input:focus{outline:none;border-color:var(--b2);box-shadow:0 0 0 3px rgba(0,0,0,.06)}
+input[type="number"]{-moz-appearance:textfield}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none}
+input[readonly]{opacity:.55;cursor:not-allowed}
+button{background:var(--bg0);border:0.5px solid var(--b1);border-radius:var(--rmd);color:var(--t0);font-family:var(--sans);font-size:13px;padding:7px 14px;cursor:pointer;transition:background .15s}
+button:hover{background:var(--bg1)}
+button:active{transform:scale(.98)}
+.btn-primary{background:var(--t0);color:var(--bg0);border-color:var(--t0)}
+.btn-primary:hover{opacity:.85;background:var(--t0)}
+.btn-danger{color:var(--td);border-color:rgba(220,38,38,.35)}
+.btn-danger:hover{background:rgba(220,38,38,.06)}
+
+.kg{display:flex;flex-direction:column;min-height:100vh}
+.setup-banner{background:#fef3c7;border-bottom:1px solid #fcd34d;padding:10px 18px;font-size:13px;color:#92400e;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.setup-banner a{color:#92400e;font-weight:600}
+
+/* ── Login wall ── */
+.login-wall{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:var(--bg0)}
+.login-box{background:var(--bg1);border:0.5px solid var(--b1);border-radius:16px;padding:44px 36px;text-align:center;max-width:380px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.login-logo{font-size:32px;margin-bottom:6px}
+.login-title{font-size:20px;font-weight:600;margin-bottom:8px}
+.login-sub{font-size:14px;color:var(--t1);line-height:1.55}
+.login-divider{border:none;border-top:0.5px solid var(--b1);margin:24px 0}
+
+/* ── Header ── */
+.kg-hdr{display:flex;align-items:center;padding:11px 18px;border-bottom:0.5px solid var(--b0);background:var(--bg0);position:sticky;top:0;z-index:20;gap:10px;flex-wrap:wrap}
+.kg-logo{font-size:16px;font-weight:500;flex-shrink:0}
+.kg-mnav{display:flex;align-items:center;gap:6px;margin:0 auto}
+.kg-mbtn{padding:4px 10px;font-size:14px}
+.kg-mlbl{font-size:14px;font-weight:500;min-width:124px;text-align:center}
+.rbadge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;flex-shrink:0}
+.rb-admin{background:#fef3c7;color:#92400e;border:0.5px solid #fcd34d}
+.rb-member{background:#d1fae5;color:#065f46;border:0.5px solid #6ee7b7}
+.rb-viewer{background:var(--bg1);color:var(--t2);border:0.5px solid var(--b1)}
+.kg-auth{display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap}
+.user-chip{display:flex;align-items:center;gap:7px}
+.user-avatar{width:26px;height:26px;border-radius:50%;border:0.5px solid var(--b1);object-fit:cover}
+.user-name{font-size:13px;font-weight:500}
+
+.kg-body{padding:16px;flex:1}
+
+/* ── Tracker ── */
+.tk-section{margin-bottom:16px}
+.kscroll{overflow-x:auto;border:0.5px solid var(--b0);border-radius:var(--rlg)}
+.kscroll::-webkit-scrollbar{height:4px}
+.kscroll::-webkit-scrollbar-thumb{background:var(--b1);border-radius:2px}
+table.kgrid{border-collapse:collapse;font-size:12px;min-width:max-content}
+table.kgrid th{background:var(--bg1);padding:5px 3px;text-align:center;font-weight:500;color:var(--t1);border-bottom:0.5px solid var(--b1);border-right:0.5px solid var(--b0);font-size:11px}
+table.kgrid th.khn{text-align:left;padding-left:12px;min-width:100px;border-right:0.5px solid var(--b1);position:sticky;left:0;z-index:10;background:var(--bg1)}
+table.kgrid th.kht{border-left:0.5px solid var(--b1);border-right:none;min-width:46px;position:sticky;right:0;z-index:10;background:var(--bg1)}
+table.kgrid th.khd{min-width:37px}
+table.kgrid th.khw{color:var(--ti)}
+table.kgrid td{border-right:0.5px solid var(--b0);border-bottom:0.5px solid var(--b0);padding:0;text-align:center;height:40px}
+table.kgrid td.kdn{background:var(--bg0);position:sticky;left:0;z-index:4;padding:0 10px;text-align:left;font-weight:500;font-size:13px;border-right:0.5px solid var(--b1);white-space:nowrap}
+table.kgrid td.kdn.mine{background:#fffbeb}
+@media(prefers-color-scheme:dark){table.kgrid td.kdn.mine{background:#292108}}
+table.kgrid td.kdt{background:var(--bg0);position:sticky;right:0;z-index:4;font-family:var(--mono);font-weight:500;font-size:13px;padding:0 10px;border-left:0.5px solid var(--b1);border-right:none}
+table.kgrid tr:nth-child(even) td.kdn,table.kgrid tr:nth-child(even) td.kdt{background:var(--bg1)}
+table.kgrid tr:nth-child(even) td.kdn.mine{background:#fef9c3}
+@media(prefers-color-scheme:dark){table.kgrid tr:nth-child(even) td.kdn.mine{background:#1f1a00}}
+
+.kcell{width:34px;height:34px;margin:2px;display:flex;align-items:center;justify-content:center;border-radius:5px;font-family:var(--mono);font-size:12px;font-weight:500;user-select:none;cursor:default}
+.kcell.editable{cursor:pointer}
+.kcell.editable:hover{opacity:.72}
+.kco{color:var(--t2);font-size:10px}
+.kc0{color:var(--t2)}
+.kc1{background:#FAEEDA;color:#412402}
+.kc2{background:#FAC775;color:#412402}
+.kc3{background:#EF9F27;color:#1a0d00}
+.kc4{background:#BA7517;color:#fff}
+@media(prefers-color-scheme:dark){
+  .kc1{background:#412402;color:#FAC775}
+  .kc2{background:#633806;color:#FAEEDA}
+  .kc3{background:#854F0B;color:#FAC775}
+  .kc4{background:#EF9F27;color:#1a0d00}
+}
+.khint{font-size:11px;color:var(--t2);text-align:center;margin-top:8px}
+
+/* ── Meal note row ── */
+.meal-note-row td{border-top:0.5px solid var(--b1)!important;height:72px;vertical-align:middle}
+.meal-note-row .kdn{font-size:11px;color:var(--t2);font-weight:400;font-style:italic}
+.meal-note-row .kdt{font-size:10px;color:var(--t2)}
+.meal-note-cell{padding:3px;cursor:default;transition:background .12s}
+.meal-note-cell.note-editable{cursor:pointer}
+.meal-note-cell.note-editable:hover{background:var(--bg1)}
+.meal-note-txt{
+  writing-mode:vertical-rl;
+  font-size:10px;color:var(--t1);
+  max-height:66px;overflow:hidden;
+  white-space:nowrap;text-overflow:ellipsis;
+  margin:0 auto;display:block;line-height:1.2;
+  letter-spacing:.02em;
+}
+.note-empty{
+  writing-mode:horizontal-tb!important;
+  font-size:16px;color:var(--b2);
+  display:flex;align-items:center;justify-content:center;
+  height:66px;
+}
+
+/* ── View banner ── */
+.view-banner{background:var(--bg1);border:0.5px solid var(--b0);border-radius:var(--rmd);padding:9px 14px;font-size:13px;color:var(--t1);margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* ── Dashboard bottom grid ── */
+.dash-bottom{display:grid;grid-template-columns:300px 1fr;gap:14px;align-items:start}
+@media(max-width:700px){.dash-bottom{grid-template-columns:1fr}}
+.dash-card{background:var(--bg0);border:0.5px solid var(--b0);border-radius:var(--rlg);padding:14px 16px}
+
+/* ── Bill ── */
+.ksrow{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:0.5px solid var(--b0);gap:8px}
+.ksrow:last-child{border-bottom:none}
+.ksname{display:flex;align-items:center;gap:7px;font-weight:500;font-size:13px}
+.ksmeals{color:var(--t2);font-family:var(--mono);font-size:11px;font-weight:400}
+.kscost{font-family:var(--mono);font-weight:500;font-size:14px}
+.kmets{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.kmet{background:var(--bg1);border-radius:var(--rmd);padding:12px;text-align:center}
+.kmet-l{font-size:11px;color:var(--t2);margin-bottom:5px}
+.kmet-v{font-family:var(--mono);font-size:20px;font-weight:500}
+
+/* ── Members ── */
+.kcard{background:var(--bg0);border:0.5px solid var(--b0);border-radius:var(--rlg);padding:14px 16px;margin-bottom:12px}
+.klbl{font-size:11px;color:var(--t2);font-weight:500;margin-bottom:10px;letter-spacing:.2px;text-transform:uppercase}
+.kmrow{background:var(--bg1);border:0.5px solid var(--b0);border-radius:var(--rmd);padding:10px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.kmdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.kmlbl{font-weight:500;font-size:13px;min-width:68px}
+.kmf{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--t1)}
+.kmf input{width:50px;text-align:center;font-family:var(--mono);font-size:12px;padding:3px 5px}
+.kmf.kef input{width:170px;text-align:left;font-family:var(--sans);font-size:12px}
+.kadd{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;padding-top:4px}
+.kadd-f{display:flex;flex-direction:column;gap:4px}
+.kadd-f label{font-size:11px;color:var(--t1)}
+
+/* ── Stats ── */
+.kbars{display:flex;align-items:flex-end;gap:10px;height:120px;padding:4px 0 0;margin-bottom:14px}
+.kbcol{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:26px}
+.kbfill{width:100%;border-radius:3px 3px 0 0;min-height:3px}
+.kblbl{font-size:10px;color:var(--t2);font-weight:500;text-align:center;overflow:hidden;max-width:52px;text-overflow:ellipsis;white-space:nowrap}
+.kbval{font-family:var(--mono);font-size:10px;color:var(--t1)}
+.kdaily{display:flex;align-items:flex-end;gap:2px;height:80px;padding-top:8px;overflow-x:auto}
+.kd{display:flex;flex-direction:column;align-items:center;gap:2px;flex:0 0 auto;width:16px}
+.kdfill{width:12px;border-radius:2px 2px 0 0;min-height:1px}
+.kdlbl{font-size:8px;color:var(--t2);font-family:var(--mono)}
+.kstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:14px}
+
+/* ── Modals ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px;backdrop-filter:blur(2px)}
+.modal-box{background:var(--bg0);border:0.5px solid var(--b1);border-radius:var(--rlg);padding:20px;width:100%;max-width:440px;box-shadow:0 12px 40px rgba(0,0,0,.2)}
+.modal-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-close{background:none;border:none;font-size:20px;color:var(--t2);cursor:pointer;padding:2px 6px;line-height:1}
+.modal-close:hover{background:none;color:var(--t0)}
+
+/* ── History ── */
+.hist-modal-box{max-width:520px;max-height:80vh;display:flex;flex-direction:column}
+.hist-list{overflow-y:auto;flex:1}
+.hist-entry{padding:10px 0;border-bottom:0.5px solid var(--b0)}
+.hist-entry:last-child{border-bottom:none}
+.hist-desc{font-size:13px;color:var(--t0);margin-bottom:3px}
+.hist-meta{font-size:11px;color:var(--t2)}
+.hist-empty{padding:20px;text-align:center;color:var(--t2);font-size:13px}
+.hist-badge{display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;margin-right:6px;vertical-align:middle}
+.hist-badge-meal{background:#fef3c7;color:#92400e}
+.hist-badge-note{background:#e0e7ff;color:#3730a3}
+@media(prefers-color-scheme:dark){
+  .hist-badge-meal{background:#422006;color:#fcd34d}
+  .hist-badge-note{background:#1e1b4b;color:#a5b4fc}
+}
+
+#kg-toast{position:fixed;bottom:16px;right:16px;z-index:999;background:var(--bgs);color:var(--ts);border:0.5px solid var(--bs);padding:9px 16px;border-radius:var(--rmd);font-size:13px;opacity:0;transform:translateY(6px);transition:all .2s;pointer-events:none}
+#kg-toast.show{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+<div class="kg" id="kg-root"></div>
+<div id="kg-toast">Copied to clipboard</div>
+<script>
+/* ── CONFIG — edit these two lines ───────────────────────────────────────── */
+const G_CLIENT_ID  = '914444723950-3ma0ahk4ecop2av83atpjfjkbh1htmme.apps.googleusercontent.com';
+const ADMIN_EMAILS = ['alitohaider@gmail.com'];
+/* ────────────────────────────────────────────────────────────────────────── */
+
+const CONFIGURED = !G_CLIENT_ID.startsWith('YOUR_');
+const MC=['#BA7517','#1D9E75','#7F77DD','#D85A30','#D4537E','#378ADD','#639922','#888780','#E24B4A'];
+const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+/* ── Auth ─────────────────────────────────────────────────────────────────── */
+let user=null;
+try{user=JSON.parse(localStorage.getItem('kg-user')||'null');}catch(e){}
+let gisReady=false;
+
+window.handleGoogleCredential=function(resp){
+  try{
+    const b64=resp.credential.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+    const p=JSON.parse(atob(b64));
+    user={name:p.name,email:p.email,picture:p.picture};
+    localStorage.setItem('kg-user',JSON.stringify(user));
+    draw();
+  }catch(e){console.error(e);}
+};
+function signOut(){
+  if(window.google)google.accounts.id.disableAutoSelect();
+  user=null;localStorage.removeItem('kg-user');draw();
+}
+function tryGoogleInit(){
+  if(!CONFIGURED)return;
+  if(!window.google?.accounts){setTimeout(tryGoogleInit,300);return;}
+  google.accounts.id.initialize({client_id:G_CLIENT_ID,callback:handleGoogleCredential,auto_select:true});
+  gisReady=true;
+  if(!user)google.accounts.id.prompt();
+  renderGBtn();
+}
+function renderGBtn(){
+  if(!gisReady||user)return;
+  const el=document.getElementById('g-btn');if(!el)return;
+  google.accounts.id.renderButton(el,{type:'standard',theme:'outline',size:'medium',text:'sign_in_with',shape:'rectangular',logo_alignment:'left'});
+}
+
+/* ── Roles ────────────────────────────────────────────────────────────────── */
+function getRole(){
+  if(!user)return'guest';
+  const em=user.email.toLowerCase();
+  if(ADMIN_EMAILS.map(e=>e.toLowerCase()).includes(em))return'admin';
+  if(G.members.some(m=>m.email&&m.email.toLowerCase()===em))return'member';
+  return'viewer';
+}
+function myMemberId(){
+  if(!user)return null;
+  const em=user.email.toLowerCase();
+  return G.members.find(m=>m.email&&m.email.toLowerCase()===em)?.id??null;
+}
+function canEdit(mid){
+  const r=getRole();
+  if(r==='admin')return true;
+  if(r==='member')return myMemberId()===mid;
+  return false;
+}
+
+/* ── State ────────────────────────────────────────────────────────────────── */
+function loadState(){try{const s=localStorage.getItem('kitchen-gp');return s?JSON.parse(s):null;}catch(e){return null;}}
+function saveState(){try{localStorage.setItem('kitchen-gp',JSON.stringify(G));}catch(e){}}
+
+let G=loadState()||{
+  month:new Date().getMonth()+1,year:new Date().getFullYear(),
+  view:'dashboard',
+  nid:8,
+  members:[
+    {id:1,name:'Ali',s:1,e:null,email:null},{id:3,name:'Awais',s:1,e:null,email:null},
+    {id:4,name:'Bilal',s:1,e:null,email:null},{id:6,name:'Imad',s:1,e:null,email:null},
+    {id:7,name:'Usama',s:1,e:null,email:null}
+  ],
+  meals:{},       // key: "year-month-memberId-day"
+  mealNotes:{},   // key: "year-month-day" → string
+  exps:{},        // key: "year-month" → expense string
+  history:[]      // change log entries
+};
+
+/* ── Migrations ───────────────────────────────────────────────────────────── */
+G.members=G.members.map(m=>({email:null,...m}));
+if(!G.mealNotes)G.mealNotes={};
+if(!G.exps){
+  // Migrate old single G.exp → per-month map
+  G.exps=G.exp?{[`${G.year}-${G.month}`]:G.exp}:{};
+  delete G.exp;
+}
+if(!G.history)G.history=[];
+if(!G.view)G.view='dashboard';
+
+// Migrate old meal keys "memberId-day" → "year-month-memberId-day"
+{
+  const oldKeys=Object.keys(G.meals).filter(k=>!k.match(/^\d{4}-/));
+  if(oldKeys.length){
+    const m2={...G.meals};
+    oldKeys.forEach(k=>{
+      m2[`${G.year}-${G.month}-${k}`]=m2[k];
+      delete m2[k];
+    });
+    G.meals=m2;
+  }
+}
+saveState();
+
+function go(p){
+  const ae=document.activeElement,aid=ae?.id,asel=ae?.selectionStart;
+  G={...G,...p};saveState();draw();
+  if(aid){const el=document.getElementById(aid);if(el){el.focus();try{el.setSelectionRange(asel,asel);}catch(e){}}}
+}
+
+/* ── Helpers ──────────────────────────────────────────────────────────────── */
+const din=(y,m)=>new Date(y,m,0).getDate();
+const dw=(y,m,d)=>DW[new Date(y,m-1,d).getDay()];
+const iwk=(y,m,d)=>{const x=new Date(y,m-1,d).getDay();return x===0||x===6;};
+// Meal count key: includes year+month so each month is independent
+const mk=(y,m,mid,d)=>`${y}-${m}-${mid}-${d}`;
+// Meal note key: per-day text annotation
+const mnk=(y,m,d)=>`${y}-${m}-${d}`;
+// Expense key for current view
+const mek=()=>`${G.year}-${G.month}`;
+const gm=(mid,d)=>G.meals[mk(G.year,G.month,mid,d)]||0;
+const ia=(mem,d)=>d>=mem.s&&(!mem.e||d<=mem.e);
+const clr=i=>MC[i%MC.length];
+const dot=c=>`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c};flex-shrink:0"></span>`;
+function getExp(){return G.exps[mek()]||'';}
+
+function mst(){
+  const n=din(G.year,G.month);
+  return G.members.map((m,i)=>{let t=0;for(let d=1;d<=n;d++)if(ia(m,d))t+=gm(m.id,d);return{...m,total:t,color:clr(i)};});
+}
+function bd(){
+  const st=mst(),tot=st.reduce((a,m)=>a+m.total,0);
+  const exp=parseFloat(getExp())||0,pm=tot>0&&exp>0?Math.round(exp/tot):0;
+  return{st,tot,exp,pm,rows:st.map(m=>({...m,cost:m.total*pm}))};
+}
+
+/* ── History ──────────────────────────────────────────────────────────────── */
+function addHistory(type,data){
+  if(!user)return;
+  const entry={ts:Date.now(),userEmail:user.email,userName:user.name,type,...data};
+  // Keep last 500 entries
+  G.history=[...G.history,entry].slice(-500);
+}
+
+/* ── Actions ──────────────────────────────────────────────────────────────── */
+function prevM(){let m=G.month-1,y=G.year;if(m<1){m=12;y--;}go({month:m,year:y});}
+function nextM(){let m=G.month+1,y=G.year;if(m>12){m=1;y++;}go({month:m,year:y});}
+
+function cm(mid,d){
+  const k=mk(G.year,G.month,mid,d),from=G.meals[k]||0,to=from>=5?0:from+1;
+  const mname=G.members.find(m=>m.id===mid)?.name||String(mid);
+  addHistory('meal',{memberId:mid,memberName:mname,day:d,month:G.month,year:G.year,from,to});
+  go({meals:{...G.meals,[k]:to}});
+}
+function rm(e,mid,d){
+  e.preventDefault();
+  const k=mk(G.year,G.month,mid,d),from=G.meals[k]||0;
+  if(from<=0)return;
+  const to=from-1;
+  const mname=G.members.find(m=>m.id===mid)?.name||String(mid);
+  addHistory('meal',{memberId:mid,memberName:mname,day:d,month:G.month,year:G.year,from,to});
+  go({meals:{...G.meals,[k]:to}});
+}
+
+function setMonthExp(v){
+  go({exps:{...G.exps,[mek()]:v}});
+}
+
+function editMealNote(d){
+  if(!user)return;
+  const k=mnk(G.year,G.month,d);
+  const cur=G.mealNotes[k]||'';
+  const modal=document.getElementById('note-modal');
+  if(!modal)return;
+  modal.style.display='flex';
+  document.getElementById('note-modal-title').textContent=
+    `Meal — ${MN[G.month-1]} ${d}, ${G.year}`;
+  const inp=document.getElementById('note-modal-inp');
+  inp.value=cur;
+  inp.dataset.day=d;
+  inp.dataset.key=k;
+  setTimeout(()=>inp.focus(),40);
+}
+function saveMealNote(){
+  const inp=document.getElementById('note-modal-inp');
+  if(!inp)return;
+  const k=inp.dataset.key,d=parseInt(inp.dataset.day),val=inp.value.trim();
+  const from=G.mealNotes[k]||'';
+  if(val!==from){
+    addHistory('note',{day:d,month:G.month,year:G.year,from,to:val});
+    const mealNotes={...G.mealNotes};
+    if(val)mealNotes[k]=val; else delete mealNotes[k];
+    go({mealNotes}); // go() calls draw() which resets modal to display:none
+  } else {
+    closeNoteModal();
+  }
+}
+function closeNoteModal(){
+  const m=document.getElementById('note-modal');
+  if(m)m.style.display='none';
+}
+
+function upm(id,f,v){go({members:G.members.map(m=>m.id===id?{...m,[f]:v}:m)});}
+function delm(id){
+  const m2={...G.meals};
+  const pat=new RegExp(`^\\d{4}-\\d{1,2}-${id}-\\d+$`);
+  Object.keys(m2).forEach(k=>{if(pat.test(k))delete m2[k];});
+  go({members:G.members.filter(m=>m.id!==id),meals:m2});
+}
+function addm(){
+  const name=(document.getElementById('new-name')?.value||'').trim();
+  const email=(document.getElementById('new-email')?.value||'').trim()||null;
+  const s=parseInt(document.getElementById('new-s')?.value)||1;
+  const ev=document.getElementById('new-e')?.value,e=ev?parseInt(ev):null;
+  if(!name)return;
+  go({members:[...G.members,{id:G.nid,name,s,e,email}],nid:G.nid+1});
+}
+function cpBill(){
+  const{tot,exp,pm,rows}=bd();
+  const maxl=Math.max(...rows.map(r=>r.name.length));
+  const lines=[
+    `Kitchen GP \u2014 ${MN[G.month-1]} ${G.year}`,
+    `Total: \u20A9${exp.toLocaleString()} | Per meal: \u20A9${pm.toLocaleString()} (${tot} meals)`,
+    '',
+    ...rows.map(r=>`${r.name.padEnd(maxl+2)}: ${String(r.total).padStart(2)} meals  \u2192  \u20A9${r.cost.toLocaleString()}`)
+  ];
+  navigator.clipboard.writeText(lines.join('\n'));
+  const t=document.getElementById('kg-toast');
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+/* ── Render ───────────────────────────────────────────────────────────────── */
+function draw(){document.getElementById('kg-root').innerHTML=ui();setTimeout(renderGBtn,0);}
+
+function ui(){
+  // FIX 1: Show login wall when not authenticated (and app is configured)
+  if(!user&&CONFIGURED)return loginWall();
+  return bnr()+hdr()+`<div class="kg-body">${G.view==='members'?membersView():dashboardView()}</div>`+modals();
+}
+
+/* ── Login wall ───────────────────────────────────────────────────────────── */
+function loginWall(){
+  return`<div class="login-wall">
+    <div class="login-box">
+      <div class="login-logo">🍳</div>
+      <div class="login-title">Kitchen GP</div>
+      <p class="login-sub">Track your household meals and split the bill fairly</p>
+      <hr class="login-divider"/>
+      <div id="g-btn" style="display:flex;justify-content:center"></div>
+      ${!CONFIGURED?`<p style="color:var(--td);font-size:12px;margin-top:16px;line-height:1.5">
+        Google login not configured.<br/>Edit <code>G_CLIENT_ID</code> in the HTML file.</p>`:''}
+    </div>
+  </div>`;
+}
+
+function bnr(){
+  if(CONFIGURED)return'';
+  return`<div class="setup-banner">&#9888;&nbsp;Google login not configured &mdash;
+    <a href="https://console.cloud.google.com" target="_blank" rel="noopener">get a Client ID</a>
+    then edit <code>G_CLIENT_ID</code> and <code>ADMIN_EMAILS</code> near the top of this file.</div>`;
+}
+
+function hdr(){
+  const role=getRole();
+  const badge=role==='admin'?`<span class="rbadge rb-admin">Admin</span>`
+    :role==='member'?`<span class="rbadge rb-member">Member</span>`
+    :user?`<span class="rbadge rb-viewer">Viewer</span>`:'';
+  const auth=user
+    ?`<div class="user-chip">
+        <img class="user-avatar" src="${user.picture}" alt=""/>
+        <span class="user-name">${user.name.split(' ')[0]}</span>
+        <button onclick="signOut()" style="font-size:12px;padding:4px 9px;color:var(--t1)">Sign out</button>
+      </div>`
+    :CONFIGURED?`<div id="g-btn"></div>`:'';
+  // History button for any logged-in user; Members button for admin only
+  const histBtn=user
+    ?`<button onclick="showHistory()" style="font-size:12px;padding:4px 9px;color:var(--t1)" title="Change log">History</button>`:'';
+  const membersBtn=role==='admin'
+    ?(G.view==='members'
+      ?`<button onclick="go({view:'dashboard'})" style="font-size:12px;padding:4px 9px">&#8592; Dashboard</button>`
+      :`<button onclick="go({view:'members'})" style="font-size:12px;padding:4px 9px">Members &#9881;</button>`)
+    :'';
+  return`<div class="kg-hdr">
+    <div class="kg-logo">Kitchen GP</div>
+    <div class="kg-mnav">
+      <button class="kg-mbtn" onclick="prevM()">&#9664;</button>
+      <div class="kg-mlbl">${MN[G.month-1]} ${G.year}</div>
+      <button class="kg-mbtn" onclick="nextM()">&#9654;</button>
+    </div>
+    ${badge}
+    <div class="kg-auth">${histBtn}${membersBtn}${auth}</div>
+  </div>`;
+}
+
+/* ── FIX 5: Dashboard = single scrollable page, no tabs ──────────────────── */
+function dashboardView(){
+  return tracker()+`<div class="dash-bottom">${billCard()}${statsCard()}</div>`;
+}
+
+/* ── Tracker ──────────────────────────────────────────────────────────────── */
+function tracker(){
+  const{year,month}=G,n=din(year,month),st=mst(),days=Array.from({length:n},(_,i)=>i+1);
+  const role=getRole(),myId=myMemberId();
+
+  const hintMap={
+    admin:'Left-click to add a meal · Right-click to remove · Click the Meal row to label any day',
+    member:'Edit your row: left-click +1 · right-click −1 · Click the Meal row to label any day',
+    viewer:'Viewing only — ask admin to link your Gmail in Members ⚙',
+    guest:'Sign in to edit your meals'
+  };
+
+  const viewBanner=role==='viewer'
+    ?`<div class="view-banner">Your Google account isn&#39;t linked to a member row yet. Ask the admin to add your email under Members &#9881;.</div>`:'';
+
+  return`<div class="tk-section">
+    ${viewBanner}
+    <div class="kscroll"><table class="kgrid">
+      <thead><tr>
+        <th class="khn">Member</th>
+        ${days.map(d=>`<th class="khd${iwk(year,month,d)?' khw':''}">
+          <div>${dw(year,month,d)}</div><div style="font-family:var(--mono)">${d}</div>
+        </th>`).join('')}
+        <th class="kht">Total</th>
+      </tr></thead>
+      <tbody>
+        ${st.map(m=>{
+          const isMine=m.id===myId;
+          return`<tr>
+            <td class="kdn${isMine?' mine':''}">
+              <span style="display:inline-flex;align-items:center;gap:8px">
+                ${dot(m.color)}${m.name}${isMine?'&nbsp;<span style="font-size:10px;color:var(--t2)">(you)</span>':''}
+              </span>
+            </td>
+            ${days.map(d=>{
+              if(!ia(m,d))return`<td><div class="kcell kco">&#183;</div></td>`;
+              const v=gm(m.id,d),cl=v===0?'kc0':v===1?'kc1':v===2?'kc2':v===3?'kc3':'kc4';
+              const ed=canEdit(m.id);
+              return`<td><div class="kcell ${cl}${ed?' editable':''}"
+                ${ed?`onclick="cm(${m.id},${d})" oncontextmenu="rm(event,${m.id},${d})" title="Left-click +1 · Right-click \u22121"`:`title="${v} meal${v!==1?'s':''}"`}>
+                ${v>0?v:''}</div></td>`;
+            }).join('')}
+            <td class="kdt">${m.total}</td>
+          </tr>`;
+        }).join('')}
+        <!-- FIX 4: Vertical meal-name row, editable by any logged-in user -->
+        <tr class="meal-note-row">
+          <td class="kdn meal-note-label" title="Click any cell to label that day's meal">Meal</td>
+          ${days.map(d=>{
+            const note=G.mealNotes[mnk(year,month,d)]||'';
+            const canNote=!!user; // any signed-in user can edit
+            return`<td class="meal-note-cell${canNote?' note-editable':''}"
+              ${canNote?`onclick="editMealNote(${d})" title="${note?'Edit: '+note:'Add meal name for day '+d}"`:`title="${note}"`}>
+              <div class="meal-note-txt${note?'':' note-empty'}">${note||'+'}</div>
+            </td>`;
+          }).join('')}
+          <td class="kdt"></td>
+        </tr>
+      </tbody>
+    </table></div>
+    <div class="khint">${hintMap[role]}</div>
+  </div>`;
+}
+
+/* ── Bill card ────────────────────────────────────────────────────────────── */
+function billCard(){
+  const{st,tot,exp,pm,rows}=bd(),rdy=exp>0&&tot>0;
+  const isAdmin=getRole()==='admin';
+  // FIX 2: expense stored per-month via getExp()/setMonthExp()
+  const expInput=isAdmin
+    ?`<input id="exp-inp" type="text" inputmode="numeric" pattern="[0-9]*"
+        style="font-family:var(--mono);font-size:15px;margin-bottom:12px"
+        value="${getExp()}" placeholder="e.g. 1097960" oninput="setMonthExp(this.value)"/>`
+    :`<input type="text" style="font-family:var(--mono);font-size:15px;margin-bottom:8px"
+        value="${exp>0?exp:''}" placeholder="Admin will enter total" readonly/>
+      <p style="font-size:12px;color:var(--t2);margin-bottom:12px">Only admin can enter the expense.</p>`;
+  return`<div class="dash-card">
+    <div class="klbl">Bill — ${MN[G.month-1]} ${G.year}</div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:6px">Total expense (KRW)</div>
+    ${expInput}
+    ${rdy?`
+      <div class="kmets">
+        <div class="kmet"><div class="kmet-l">Total meals</div><div class="kmet-v">${tot}</div></div>
+        <div class="kmet"><div class="kmet-l">Per meal</div><div class="kmet-v" style="font-size:16px">&#8361;${pm.toLocaleString()}</div></div>
+      </div>
+      <button onclick="cpBill()" style="width:100%;margin-bottom:14px">Copy bill &#8599;</button>
+    `:`<p style="font-size:13px;color:var(--t2);margin-bottom:14px">${isAdmin?'Enter the Splitwise total above.':'Waiting for admin to enter the total.'}</p>`}
+    <div style="font-size:11px;color:var(--t2);margin-bottom:4px">Per person</div>
+    ${rows.map(r=>`<div class="ksrow">
+      <div class="ksname">${dot(r.color)} ${r.name}<span class="ksmeals">${r.total} meals</span></div>
+      <div class="kscost">${rdy?'&#8361;'+r.cost.toLocaleString():'&#8212;'}</div>
+    </div>`).join('')}
+    <div class="ksrow" style="border-top:0.5px solid var(--b1);margin-top:4px;padding-top:12px">
+      <div class="ksname" style="font-size:14px">Total</div>
+      <div class="kscost" style="font-size:16px">${rdy?'&#8361;'+exp.toLocaleString():'&#8212;'}</div>
+    </div>
+  </div>`;
+}
+
+/* ── Stats card ───────────────────────────────────────────────────────────── */
+function statsCard(){
+  const st=mst(),{year,month}=G,n=din(year,month);
+  const maxT=Math.max(...st.map(m=>m.total),1);
+  const daily=Array.from({length:n},(_,i)=>{const d=i+1;return{d,t:G.members.reduce((a,m)=>ia(m,d)?a+gm(m.id,d):a,0)};});
+  const maxD=Math.max(...daily.map(x=>x.t),1);
+  const tot=st.reduce((a,m)=>a+m.total,0);
+  const top=[...st].sort((a,b)=>b.total-a.total)[0];
+  return`<div class="dash-card">
+    <div class="klbl">Stats — ${MN[month-1]} ${year}</div>
+    <div class="kstats">
+      <div class="kmet"><div class="kmet-l">Total meals</div><div class="kmet-v">${tot}</div></div>
+      <div class="kmet"><div class="kmet-l">Avg / person</div><div class="kmet-v">${Math.round(tot/(G.members.length||1))}</div></div>
+      <div class="kmet"><div class="kmet-l">Active days</div><div class="kmet-v">${daily.filter(x=>x.t>0).length}/${n}</div></div>
+      <div class="kmet"><div class="kmet-l">Top eater</div><div class="kmet-v" style="font-size:14px">${top?.name||'&#8212;'}</div></div>
+    </div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:2px">Per person</div>
+    <div class="kbars">
+      ${st.map(m=>`<div class="kbcol">
+        <div class="kbval">${m.total}</div>
+        <div class="kbfill" style="height:${Math.round((m.total/maxT)*90)}px;background:${m.color};opacity:.85"></div>
+        <div class="kblbl">${m.name}</div>
+      </div>`).join('')}
+    </div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:2px">Daily load</div>
+    <div class="kdaily">
+      ${daily.map(({d,t})=>`<div class="kd">
+        <div class="kdfill" style="height:${Math.round((t/maxD)*60)}px;background:${iwk(year,month,d)?'#378ADD':'#BA7517'};opacity:.8"></div>
+        <div class="kdlbl">${d}</div>
+      </div>`).join('')}
+    </div>
+    <div style="display:flex;gap:14px;margin-top:8px;font-size:11px;color:var(--t2)">
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#BA7517;display:inline-block"></span>Weekday</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#378ADD;display:inline-block"></span>Weekend</span>
+    </div>
+  </div>`;
+}
+
+/* ── Members view (admin only) ────────────────────────────────────────────── */
+function membersView(){
+  const n=din(G.year,G.month);
+  return`<div style="max-width:800px">
+    <div class="kcard">
+      <div class="klbl">Members &amp; Google account linking</div>
+      <p style="font-size:12px;color:var(--t1);margin-bottom:14px;line-height:1.6">
+        Set each member's Gmail so they can sign in and edit their own row.<br/>
+        Leave blank if they won't use the app.
+      </p>
+      ${G.members.map((m,i)=>`<div class="kmrow">
+        <span class="kmdot" style="background:${clr(i)}"></span>
+        <span class="kmlbl">${m.name}</span>
+        <div class="kmf kef"><span>Gmail:</span>
+          <input type="text" value="${m.email||''}" placeholder="e.g. name@gmail.com"
+            onchange="upm(${m.id},'email',this.value.trim()||null)"/>
+        </div>
+        <div class="kmf"><span>Start:</span><input type="number" min="1" max="${n}" value="${m.s}" onchange="upm(${m.id},'s',+this.value||1)"/></div>
+        <div class="kmf"><span>End:</span><input type="number" min="1" max="${n}" value="${m.e||''}" placeholder="${n}" onchange="upm(${m.id},'e',this.value?+this.value:null)"/></div>
+        <button class="btn-danger" onclick="delm(${m.id})" style="margin-left:auto;flex-shrink:0">Remove</button>
+      </div>`).join('')}
+    </div>
+    <div class="kcard">
+      <div class="klbl">Add member</div>
+      <div class="kadd">
+        <div class="kadd-f" style="flex:2;min-width:90px"><label>Name</label><input id="new-name" type="text" placeholder="Name" style="font-family:var(--sans)"/></div>
+        <div class="kadd-f" style="flex:3;min-width:140px"><label>Gmail (optional)</label><input id="new-email" type="text" placeholder="name@gmail.com" style="font-family:var(--sans)"/></div>
+        <div class="kadd-f" style="flex:1;min-width:52px"><label>Start</label><input id="new-s" type="number" min="1" max="${n}" value="1"/></div>
+        <div class="kadd-f" style="flex:1;min-width:52px"><label>End (opt)</label><input id="new-e" type="number" min="1" max="${n}" placeholder="${n}"/></div>
+        <button class="btn-primary" onclick="addm()" style="flex-shrink:0">Add</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── Modals ───────────────────────────────────────────────────────────────── */
+function modals(){
+  return`
+    <!-- FIX 4: Meal note editor -->
+    <div id="note-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeNoteModal()">
+      <div class="modal-box">
+        <div class="modal-hdr">
+          <span id="note-modal-title" style="font-weight:500;font-size:14px"></span>
+          <button class="modal-close" onclick="closeNoteModal()">&#10005;</button>
+        </div>
+        <input id="note-modal-inp" type="text"
+          placeholder="e.g. Kimchi jjigae, Bibimbap, Doenjang jjigae…"
+          onkeydown="if(event.key==='Enter')saveMealNote();if(event.key==='Escape')closeNoteModal()"
+          style="margin-bottom:12px"/>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button onclick="closeNoteModal()">Cancel</button>
+          <button class="btn-primary" onclick="saveMealNote()">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FIX 3: History modal -->
+    <div id="hist-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeHistory()">
+      <div class="modal-box hist-modal-box">
+        <div class="modal-hdr">
+          <span style="font-weight:500;font-size:14px">Change History</span>
+          <button class="modal-close" onclick="closeHistory()">&#10005;</button>
+        </div>
+        <div id="hist-list" class="hist-list"></div>
+      </div>
+    </div>`;
+}
+
+/* ── FIX 3: History functions ─────────────────────────────────────────────── */
+function showHistory(){
+  const modal=document.getElementById('hist-modal');
+  if(!modal)return;
+  modal.style.display='flex';
+  const list=document.getElementById('hist-list');
+  const h=[...G.history].reverse();
+  if(!h.length){
+    list.innerHTML=`<div class="hist-empty">No changes recorded yet.<br/>Meal edits and note updates will appear here.</div>`;
+    return;
+  }
+  const pad=n=>String(n).padStart(2,'0');
+  list.innerHTML=h.map(e=>{
+    const d=new Date(e.ts);
+    const dateStr=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    let desc='',badge='';
+    if(e.type==='meal'){
+      badge=`<span class="hist-badge hist-badge-meal">meal</span>`;
+      desc=`${badge}<b>${e.memberName}</b> · ${MN[e.month-1]} ${e.day}, ${e.year}: ${e.from} &#8594; ${e.to} meal${e.to!==1?'s':''}`;
+    } else {
+      badge=`<span class="hist-badge hist-badge-note">note</span>`;
+      const from=e.from||'(empty)',to=e.to||'(empty)';
+      desc=`${badge}${MN[e.month-1]} ${e.day}, ${e.year}: &#8220;${from}&#8221; &#8594; &#8220;${to}&#8221;`;
+    }
+    return`<div class="hist-entry">
+      <div class="hist-desc">${desc}</div>
+      <div class="hist-meta">${dateStr} &middot; ${e.userName}</div>
+    </div>`;
+  }).join('');
+}
+function closeHistory(){
+  const m=document.getElementById('hist-modal');
+  if(m)m.style.display='none';
+}
+
+/* ── Boot ─────────────────────────────────────────────────────────────────── */
+draw();
+tryGoogleInit();
+</script>
+</body>
+</html>
